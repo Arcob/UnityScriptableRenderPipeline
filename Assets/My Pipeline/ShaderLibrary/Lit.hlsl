@@ -11,6 +11,20 @@ CBUFFER_START(UnityPerDraw)
 	float4x4 unity_ObjectToWorld;
 CBUFFER_END
 
+#define MAX_VISIBLE_LIGHTS 4
+
+CBUFFER_START(_LightBuffer)
+	float4 _VisibleLightColors[MAX_VISIBLE_LIGHTS];
+	float4 _VisibleLightDirections[MAX_VISIBLE_LIGHTS];
+CBUFFER_END
+
+float3 DiffuseLight(int index, float3 normal) {
+	float3 lightColor = _VisibleLightColors[index].rgb;
+	float3 lightDirection = _VisibleLightDirections[index].xyz;
+	float diffuse = saturate(dot(normal, lightDirection));
+	return diffuse * lightColor;
+}
+
 #define UNITY_MATRIX_M unity_ObjectToWorld
 
 #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/UnityInstancing.hlsl"
@@ -46,7 +60,10 @@ float4 LitPassFragment (VertexOutput input) : SV_TARGET {
 	input.normal = normalize(input.normal);
 	float3 albedo = UNITY_ACCESS_INSTANCED_PROP(PerInstance, _Color).rgb;
 
-	float3 diffuseLight = saturate(dot(input.normal, float3(0, 1, 0)));
+	float3 diffuseLight = 0;
+	for (int i = 0; i < MAX_VISIBLE_LIGHTS; i++) {
+		diffuseLight += DiffuseLight(i, input.normal);
+	}
 	float3 color = diffuseLight * albedo;
 	return float4(color, 1);
 }

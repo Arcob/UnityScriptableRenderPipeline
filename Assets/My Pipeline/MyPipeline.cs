@@ -29,6 +29,20 @@ public class MyPipeline : RenderPipeline
         name = "Render Camera"
     };
 
+    DrawRendererFlags drawFlags;
+
+    public MyPipeline(bool dynamicBatching, bool instancing)
+    {
+        if (dynamicBatching)
+        {
+            drawFlags = DrawRendererFlags.EnableDynamicBatching;
+        }
+        if (instancing)
+        {
+            drawFlags |= DrawRendererFlags.EnableInstancing;
+        }
+    }
+
     void Render(ScriptableRenderContext context, Camera camera)
     {
         //获取剔除参数
