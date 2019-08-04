@@ -5,6 +5,17 @@ using Conditional = System.Diagnostics.ConditionalAttribute;
 
 public class MyPipeline : RenderPipeline
 { //RenderPipeline是带有基础实现的IRenderPipeline接口
+
+    const int maxVisibleLights = 4;
+
+    static int visibleLightColorsId =
+        Shader.PropertyToID("_VisibleLightColors");
+    static int visibleLightDirectionsId =
+        Shader.PropertyToID("_VisibleLightDirections");
+
+    Vector4[] visibleLightColors = new Vector4[maxVisibleLights];
+    Vector4[] visibleLightDirections = new Vector4[maxVisibleLights];
+
     public override void Render(
         ScriptableRenderContext renderContext, Camera[] cameras
     )
@@ -33,6 +44,7 @@ public class MyPipeline : RenderPipeline
 
     public MyPipeline(bool dynamicBatching, bool instancing)
     {
+        GraphicsSettings.lightsUseLinearIntensity = true;
         if (dynamicBatching)
         {
             drawFlags = DrawRendererFlags.EnableDynamicBatching;
@@ -40,6 +52,20 @@ public class MyPipeline : RenderPipeline
         if (instancing)
         {
             drawFlags |= DrawRendererFlags.EnableInstancing;
+        }
+    }
+
+    void ConfigureLights()
+    {
+        for (int i = 0; i < cull.visibleLights.Count; i++)
+        {
+            VisibleLight light = cull.visibleLights[i];
+            visibleLightColors[i] = light.finalColor;
+            Vector4 v = light.localToWorld.GetColumn(2);
+            v.x = -v.x;
+            v.y = -v.y;
+            v.z = -v.z;
+            visibleLightDirections[i] = v;
         }
     }
 
@@ -76,8 +102,17 @@ public class MyPipeline : RenderPipeline
             camera.backgroundColor
         );*/
 
+
+        ConfigureLights();
+
         //设置帧调试器采样
         cameraBuffer.BeginSample("Render Camera");
+        cameraBuffer.SetGlobalVectorArray(
+            visibleLightColorsId, visibleLightColors
+        );
+        cameraBuffer.SetGlobalVectorArray(
+            visibleLightDirectionsId, visibleLightDirections
+        );
         cameraBuffer.ClearRenderTarget(true, false, Color.clear);
 
 
